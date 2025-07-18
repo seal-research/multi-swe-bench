@@ -21,7 +21,7 @@ class SpringBootImageBase(Image):
         return self._config
 
     def dependency(self) -> Union[str, "Image"]:
-        return "ubuntu:latest"
+        return "ubuntu:22.04"
 
     def image_tag(self) -> str:
         return "base"

@@ -21,7 +21,7 @@ class MockitoImageBase(Image):
         return self._config
 
     def dependency(self) -> Union[str, "Image"]:
-        return "ubuntu:latest"
+        return "ubuntu:22.04"
 
     def image_tag(self) -> str:
         return "base"
@@ -61,6 +61,11 @@ RUN apt update && apt install -y gnupg ca-certificates git curl
 RUN curl -s https://repos.azul.com/azul-repo.key | gpg --dearmor -o /usr/share/keyrings/azul.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/azul.gpg] https://repos.azul.com/zulu/deb stable main" | tee /etc/apt/sources.list.d/zulu.list
 RUN apt update && apt install -y zulu21-jdk
+# install swe-rex for sweagent:
+RUN apt-get update && apt-get install -y python3 python3-pip python3-venv
+RUN pip3 install pipx && \
+    pipx ensurepath && \
+    pipx install swe-rex
 
 {code}
 

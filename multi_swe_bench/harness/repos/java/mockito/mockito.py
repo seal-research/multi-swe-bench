@@ -77,9 +77,10 @@ RUN pip3 install pipx && \
 
 
 class MockitoImageDefault(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -89,8 +90,12 @@ class MockitoImageDefault(Image):
     def config(self) -> Config:
         return self._config
 
-    def dependency(self) -> Image | None:
-        return MockitoImageBase(self.pr, self._config)
+    def dependency(self) -> Image | Union[str, "Image"]:
+        if self._use_apptainer:
+            # return "omnicodeorg/omnicode:mockito_mockito_base"
+            return "wellslu/java_test:latest"
+        else:
+            return MockitoImageBase(self.pr, self._config)
 
     def image_tag(self) -> str:
         return f"pr-{self.pr.number}"
@@ -261,17 +266,18 @@ git apply /home/test.patch /home/fix.patch
 
 @Instance.register("mockito", "mockito")
 class Mockito(Instance):
-    def __init__(self, pr: PullRequest, config: Config, *args, **kwargs):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool, *args, **kwargs):
         super().__init__()
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
         return self._pr
 
     def dependency(self) -> Optional[Image]:
-        return MockitoImageDefault(self.pr, self._config)
+        return MockitoImageDefault(self.pr, self._config, self._use_apptainer)
 
     def run(self, run_cmd: str = "") -> str:
         if run_cmd:

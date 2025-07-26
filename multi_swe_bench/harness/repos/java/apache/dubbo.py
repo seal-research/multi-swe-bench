@@ -66,9 +66,10 @@ RUN pip3 install pipx && \
 
 
 class DubboImageDefault(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -79,7 +80,10 @@ class DubboImageDefault(Image):
         return self._config
 
     def dependency(self) -> Image | None:
-        return DubboImageBase(self.pr, self._config)
+        if self._use_apptainer:
+            return "omnicodeorg/omnicode:apache_dubbo_base"
+        else:
+            return DubboImageBase(self.pr, self._config)
 
     def image_tag(self) -> str:
         return f"pr-{self.pr.number}"
@@ -259,17 +263,18 @@ mvn clean test -Dsurefire.useFile=false -Dmaven.test.skip=false -DfailIfNoTests=
 
 @Instance.register("apache", "dubbo")
 class Dubbo(Instance):
-    def __init__(self, pr: PullRequest, config: Config, *args, **kwargs):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool, *args, **kwargs):
         super().__init__()
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
         return self._pr
 
     def dependency(self) -> Optional[Image]:
-        return DubboImageDefault(self.pr, self._config)
+        return DubboImageDefault(self.pr, self._config, self._use_apptainer)
 
     def run(self, run_cmd: str = "") -> str:
         if run_cmd:

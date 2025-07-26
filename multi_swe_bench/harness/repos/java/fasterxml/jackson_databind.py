@@ -61,9 +61,10 @@ RUN apt-get install -y maven
 
 
 class JacksonDatabindImageDefault(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, , use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -74,7 +75,10 @@ class JacksonDatabindImageDefault(Image):
         return self._config
 
     def dependency(self) -> Image | None:
-        return JacksonDatabindImageBase(self.pr, self._config)
+        if self._use_apptainer:
+            return "omnicodeorg/omnicode:fasterxml_jackson-databind_base"
+        else:
+            return JacksonDatabindImageBase(self.pr, self._config)
 
     def image_tag(self) -> str:
         return f"pr-{self.pr.number}"
@@ -352,9 +356,10 @@ mvn clean test -Dmaven.test.skip=false -DfailIfNoTests=false
 
 
 class JacksonDatabindImage3851(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -365,7 +370,10 @@ class JacksonDatabindImage3851(Image):
         return self._config
 
     def dependency(self) -> Image | None:
-        return JacksonDatabindImageBase(self.pr, self._config)
+        if self._use_apptainer:
+            return "omnicodeorg/omnicode:fasterxml_jackson-core_base"
+        else:
+            return JacksonDatabindImageBase(self.pr, self._config)
 
     def image_tag(self) -> str:
         return f"pr-{self.pr.number}"
@@ -558,10 +566,11 @@ mvn clean test -Dsurefire.useFile=false -Dmaven.test.skip=false -Dtest=com.faste
 
 @Instance.register("fasterxml", "jackson-databind")
 class JacksonDatabind(Instance):
-    def __init__(self, pr: PullRequest, config: Config, *args, **kwargs):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool, *args, **kwargs):
         super().__init__()
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -569,9 +578,9 @@ class JacksonDatabind(Instance):
 
     def dependency(self) -> Optional[Image]:
         if self.pr.number == 3851:
-            return JacksonDatabindImage3851(self.pr, self._config)
+            return JacksonDatabindImage3851(self.pr, self._config, self._use_apptainer)
 
-        return JacksonDatabindImageDefault(self.pr, self._config)
+        return JacksonDatabindImageDefault(self.pr, self._config, self._use_apptainer)
 
     def run(self, run_cmd: str = "") -> str:
         if run_cmd:

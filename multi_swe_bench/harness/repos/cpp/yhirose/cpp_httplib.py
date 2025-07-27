@@ -51,6 +51,22 @@ ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 RUN apt-get update && apt-get install -y libbrotli-dev libcurl4-openssl-dev
 RUN apt-get install -y clang build-essential
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    python3-setuptools \
+    curl \
+    git \
+    ca-certificates \
+ && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Set PATH to include pipx
+ENV PATH="/root/.local/bin:$PATH"
+
+# Install pipx and swe-rex
+RUN pip3 install --break-system-packages --user pipx && \
+    /root/.local/bin/pipx install swe-rex
 
 {code}
 

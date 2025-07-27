@@ -70,43 +70,24 @@ def run(
     output_path: Optional[Path] = None,
 ) -> str:
     try:
-        # result = subprocess.run(
-        #     [APPTAINER_BASH, "exec", "--writable", "apptainer_sandbox", "bash", "-c", 
-        #         f"cd apptainer_sandbox && {run_command}"],
-        #     cwd=str(image_dir),
-        #     stdout=subprocess.PIPE,
-        #     stderr=subprocess.STDOUT,
-        #     text=True,
-        #     timeout=None
-        # )
-    
-        # output = result.stdout
-        
-        # if output_path:
-        #     with open(output_path, "w") as f:
-        #         f.write(output)
-        #         if result.returncode != 0:
-        #             f.write(f"\n\nProcess returned non-zero exit code: {result.returncode}")
-        
-        # return output
-
-        process = subprocess.Popen(
-            [APPTAINER_BASH, "exec", "--writable", "apptainer_sandbox", "bash", "-c",
-             f"cd apptainer_sandbox && {run_command}"],
+        result = subprocess.run(
+            [APPTAINER_BASH, "exec", "--writable", "apptainer_sandbox", "bash", "-c", 
+                f"cd apptainer_sandbox && {run_command}"],
             cwd=str(image_dir),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
-            bufsize=1
+            timeout=None
         )
-        output = ""
-        with process.stdout:
-            for line in process.stdout:
-                output += line
-                if output_path:
-                    with open(output_path, "a") as f:
-                        f.write(line)
-        process.wait()
+    
+        output = result.stdout
+        
+        if output_path:
+            with open(output_path, "w") as f:
+                f.write(output)
+                if result.returncode != 0:
+                    f.write(f"\n\nProcess returned non-zero exit code: {result.returncode}")
+        
         return output
 
     except Exception as e:
@@ -117,10 +98,10 @@ def run(
         # Remove the Apptainer sandbox directory
         apptainer_base_file = image_dir / "apptainer_base.sif"
         sandbox_path = image_dir / "apptainer_sandbox"
-        # try:
-        #     if sandbox_path.exists():
-        #         shutil.rmtree(sandbox_path, ignore_errors=True)
-        #     if apptainer_base_file.exists():
-        #         os.remove(apptainer_base_file)
-        # except Exception as e:
-        #     print(f"Failed to remove Apptainer sandbox or base image file: {e}")
+        try:
+            if sandbox_path.exists():
+                shutil.rmtree(sandbox_path, ignore_errors=True)
+            if apptainer_base_file.exists():
+                os.remove(apptainer_base_file)
+        except Exception as e:
+            print(f"Failed to remove Apptainer sandbox or base image file: {e}")

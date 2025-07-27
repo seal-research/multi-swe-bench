@@ -61,7 +61,7 @@ RUN apt-get install -y maven
 
 
 class JacksonDatabindImageDefault(Image):
-    def __init__(self, pr: PullRequest, config: Config, , use_apptainer: bool):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
         self._use_apptainer = use_apptainer

@@ -73,9 +73,10 @@ RUN apt install -y maven
 
 
 class JibImageDefault(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -86,7 +87,10 @@ class JibImageDefault(Image):
         return self._config
 
     def dependency(self) -> Image | None:
-        return JibImageBase(self.pr, self._config)
+        if self._use_apptainer:
+            return "omnicodeorg/omnicode:googlecontainertools_jib_base"
+        else:
+            return JibImageBase(self.pr, self._config)
 
     def image_tag(self) -> str:
         return f"pr-{self.pr.number}"
@@ -256,9 +260,10 @@ git apply /home/test.patch /home/fix.patch
 
 
 class JibImage2688(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -269,7 +274,10 @@ class JibImage2688(Image):
         return self._config
 
     def dependency(self) -> Image | None:
-        return JibImageBase(self.pr, self._config)
+        if self._use_apptainer:
+            return "omnicodeorg/omnicode:googlecontainertools_jib_base"
+        else:
+            return JibImageBase(self.pr, self._config)
 
     def image_tag(self) -> str:
         return f"pr-{self.pr.number}"
@@ -440,10 +448,11 @@ git apply /home/test.patch /home/fix.patch
 
 @Instance.register("googlecontainertools", "jib")
 class Jib(Instance):
-    def __init__(self, pr: PullRequest, config: Config, *args, **kwargs):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool, *args, **kwargs):
         super().__init__()
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -451,9 +460,9 @@ class Jib(Instance):
 
     def dependency(self) -> Optional[Image]:
         if self.pr.number == 2688:
-            return JibImage2688(self.pr, self._config)
+            return JibImage2688(self.pr, self._config, self._use_apptainer)
 
-        return JibImageDefault(self.pr, self._config)
+        return JibImageDefault(self.pr, self._config, self._use_apptainer)
 
     def run(self, run_cmd: str = "") -> str:
         if run_cmd:

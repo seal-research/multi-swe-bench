@@ -93,7 +93,6 @@ class MockitoImageDefault(Image):
     def dependency(self) -> Image | Union[str, "Image"]:
         if self._use_apptainer:
             return "omnicodeorg/omnicode:mockito_mockito_base"
-            # return "wellslu/java_test:latest"
         else:
             return MockitoImageBase(self.pr, self._config)
 

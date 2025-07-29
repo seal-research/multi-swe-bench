@@ -20,7 +20,7 @@ class SimdjsonImageBase(Image):
         return self._config
 
     def dependency(self) -> Union[str, "Image"]:
-        return "gcc:12"
+        return "gcc:11"
 
     def image_tag(self) -> str:
         return "base"

@@ -371,7 +371,7 @@ class JacksonDatabindImage3851(Image):
 
     def dependency(self) -> Image | None:
         if self._use_apptainer:
-            return "omnicodeorg/omnicode:fasterxml_jackson-core_base"
+            return "omnicodeorg/omnicode:fasterxml_jackson-databind_base"
         else:
             return JacksonDatabindImageBase(self.pr, self._config)
 

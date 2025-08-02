@@ -18,8 +18,10 @@ from typing import Optional, Union
 
 import docker
 
-docker_client = docker.from_env()
-
+try:
+    docker_client = docker.from_env()
+except docker.errors.DockerException as e:
+    logging.error(f"Failed to connect to Docker: {e}. Please use apptainer mode.")
 
 def exists(image_name: str) -> bool:
     try:

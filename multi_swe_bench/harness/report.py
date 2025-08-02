@@ -179,6 +179,7 @@ def generate_report(
 @dataclass
 class ReportTask(PullRequestBase):
     instance_dir: Path
+    use_apptainer: bool
 
     @property
     def instance(self) -> Instance:
@@ -201,7 +202,7 @@ class ReportTask(PullRequestBase):
             clear_env=False,
         )
 
-        return Instance.create(pr, config)
+        return Instance.create(pr, config, self.use_apptainer)
 
     @property
     def run_log(self) -> str:

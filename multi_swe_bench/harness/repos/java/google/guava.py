@@ -65,9 +65,10 @@ RUN pip3 install pipx && \
 
 
 class GuavaImageDefault(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -78,7 +79,10 @@ class GuavaImageDefault(Image):
         return self._config
 
     def dependency(self) -> Optional[Image]:
-        return GuavaImageBase(self.pr, self._config)
+        if self._use_apptainer:
+            return "omnicodeorg/omnicode:google_guava_base"
+        else:
+            return GuavaImageBase(self.pr, self._config)
 
     def image_tag(self) -> str:
         return f"pr-{self.pr.number}"
@@ -169,17 +173,18 @@ mvn clean test -DfailIfNoTests=false
 
 @Instance.register("google", "guava")
 class Guava(Instance):
-    def __init__(self, pr: PullRequest, config: Config, *args, **kwargs):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool, *args, **kwargs):
         super().__init__()
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
         return self._pr
 
     def dependency(self) -> Optional[Image]:
-        return GuavaImageDefault(self.pr, self._config)
+        return GuavaImageDefault(self.pr, self._config, self._use_apptainer)
 
     def run(self, run_cmd: str = "") -> str:
         return run_cmd or "bash /home/run.sh"

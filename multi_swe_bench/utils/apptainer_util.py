@@ -5,19 +5,33 @@ import subprocess, shutil, os
 
 APPTAINER_BASH = "apptainer" if shutil.which("apptainer") else "singularity"
 
+def check_files_exist(sandbox_path: Path, apptainer_base_file: Path, logger: logging.Logger):
+    if sandbox_path.exists():
+        shutil.rmtree(sandbox_path, ignore_errors=True)
+        logger.info(f"Removed existing sandbox directory: {sandbox_path}")
+    if apptainer_base_file.exists():
+        os.remove(apptainer_base_file)
+        logger.info(f"Removed existing Apptainer base image file: {apptainer_base_file}")
+
 def pull_build(
     image_dir: Path, sif_name: str, image_full_name: str, files: list, logger: logging.Logger
 ):
-    image_dir = str(image_dir)
-    logger.info(
-        f"Start building image `{image_full_name}`, working directory is `{image_dir}`"
-    )
     try:
+        # Remove existing sandbox and base image if they exist
+        sandbox_path = image_dir / "apptainer_sandbox"
+        apptainer_base_file = image_dir / sif_name
+        check_files_exist(sandbox_path, apptainer_base_file, logger)
+
+        image_dir = str(image_dir)
+        logger.info(
+            f"Start building image `{image_full_name}`, working directory is `{image_dir}`"
+        )
+
         # Pull the Apptainer base image
         logger.info("Pulling Apptainer image...")
         result = subprocess.run(
             [APPTAINER_BASH, "pull", sif_name, f"docker://{image_full_name}"],
-            cwd=str(image_dir),
+            cwd=image_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True

@@ -20,7 +20,7 @@ class Fastjson2ImageBase(Image):
         return self._config
 
     def dependency(self) -> Union[str, "Image"]:
-        return "ubuntu:20.04"
+        return "ubuntu:22.04"
 
     def image_tag(self) -> str:
         return "base"

@@ -66,9 +66,10 @@ RUN pip3 install pipx && \
 
 
 class JacksonDataformatXmlImageDefault(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -79,7 +80,10 @@ class JacksonDataformatXmlImageDefault(Image):
         return self._config
 
     def dependency(self) -> Image | None:
-        return JacksonDataformatXmlImageBase(self.pr, self._config)
+        if self._use_apptainer:
+            return "omnicodeorg/omnicode:fasterxml_jackson-dataformat-xml_base"
+        else:
+            return JacksonDataformatXmlImageBase(self.pr, self._config)
 
     def image_tag(self) -> str:
         return f"pr-{self.pr.number}"
@@ -288,17 +292,18 @@ mvn clean test -Dmaven.test.skip=false -DfailIfNoTests=false
 
 @Instance.register("fasterxml", "jackson-dataformat-xml")
 class JacksonDataformatXml(Instance):
-    def __init__(self, pr: PullRequest, config: Config, *args, **kwargs):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool, *args, **kwargs):
         super().__init__()
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
         return self._pr
 
     def dependency(self) -> Optional[Image]:
-        return JacksonDataformatXmlImageDefault(self.pr, self._config)
+        return JacksonDataformatXmlImageDefault(self.pr, self._config, self._use_apptainer)
 
     def run(self, run_cmd: str = "") -> str:
         if run_cmd:

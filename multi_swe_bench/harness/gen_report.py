@@ -140,6 +140,7 @@ class CliArgs:
     log_level: str
     log_to_console: bool
     regen: bool = True
+    use_apptainer: bool = False
 
     def __post_init__(self):
         self._check_mode()
@@ -236,6 +237,10 @@ class CliArgs:
     def _check_log_to_console(self):
         if not isinstance(self.log_to_console, bool):
             raise ValueError(f"Invalid log_to_console: {self.log_to_console}")
+    
+    def _check_use_apptainer(self):
+        if not isinstance(self.use_apptainer, bool):
+            raise ValueError(f"Invalid use_apptainer: {self.use_apptainer}")
 
     @property
     def logger(self) -> logging.Logger:
@@ -357,7 +362,7 @@ class CliArgs:
                     if instance_dir.is_dir() and instance_dir.name.startswith("pr-"):
                         try:
                             number = int(instance_dir.name[3:])
-                            task = ReportTask(org, repo, number, instance_dir)
+                            task = ReportTask(org, repo, number, instance_dir, self.use_apptainer)
                             if not self.check_specific(task.id):
                                 continue
                             if self.check_skip(task.id):

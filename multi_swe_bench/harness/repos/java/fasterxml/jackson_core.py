@@ -66,9 +66,10 @@ RUN pip3 install pipx && \
 
 
 class JacksonCoreImageDefault(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -79,8 +80,11 @@ class JacksonCoreImageDefault(Image):
         return self._config
 
     def dependency(self) -> Image | None:
-        return JacksonCoreImageBase(self.pr, self._config)
-
+        if self._use_apptainer:
+            return "omnicodeorg/omnicode:fasterxml_jackson-core_base"
+        else:
+            return JacksonCoreImageBase(self.pr, self._config)
+    
     def image_tag(self) -> str:
         return f"pr-{self.pr.number}"
 
@@ -301,9 +305,10 @@ mvn clean test -Dmaven.test.skip=false -DfailIfNoTests=false
 
 
 class JacksonCoreImage980(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -314,7 +319,10 @@ class JacksonCoreImage980(Image):
         return self._config
 
     def dependency(self) -> Image | None:
-        return JacksonCoreImageBase(self.pr, self._config)
+        if self._use_apptainer:
+            return "omnicodeorg/omnicode:fasterxml_jackson-core_base"
+        else:
+            return JacksonCoreImageBase(self.pr, self._config)
 
     def image_tag(self) -> str:
         return f"pr-{self.pr.number}"
@@ -508,10 +516,11 @@ mvn clean test -Dsurefire.useFile=false -Dmaven.test.skip=false -Dtest=com.faste
 
 @Instance.register("fasterxml", "jackson-core")
 class JacksonCore(Instance):
-    def __init__(self, pr: PullRequest, config: Config, *args, **kwargs):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool, *args, **kwargs):
         super().__init__()
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -519,9 +528,9 @@ class JacksonCore(Instance):
 
     def dependency(self) -> Optional[Image]:
         if self.pr.number == 980:
-            return JacksonCoreImage980(self.pr, self._config)
+            return JacksonCoreImage980(self.pr, self._config, self._use_apptainer)
 
-        return JacksonCoreImageDefault(self.pr, self._config)
+        return JacksonCoreImageDefault(self.pr, self._config, self._use_apptainer)
 
     def run(self, run_cmd: str = "") -> str:
         if run_cmd:

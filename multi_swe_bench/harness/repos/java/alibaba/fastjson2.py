@@ -65,9 +65,10 @@ RUN apt update && apt install -y zulu8-jdk
 
 
 class Fastjson2ImageDefault(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -78,7 +79,10 @@ class Fastjson2ImageDefault(Image):
         return self._config
 
     def dependency(self) -> Image | None:
-        return Fastjson2ImageBase(self.pr, self._config)
+        if self._use_apptainer:
+            return "omnicodeorg/omnicode:alibaba_fastjson2_base"
+        else:
+            return Fastjson2ImageBase(self.pr, self._config)
 
     def image_tag(self) -> str:
         return f"pr-{self.pr.number}"
@@ -215,17 +219,18 @@ git apply /home/test.patch /home/fix.patch
 
 @Instance.register("alibaba", "fastjson2")
 class Fastjson2(Instance):
-    def __init__(self, pr: PullRequest, config: Config, *args, **kwargs):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool, *args, **kwargs):
         super().__init__()
         self._pr = pr
         self._config = config
+        self._use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
         return self._pr
 
     def dependency(self) -> Optional[Image]:
-        return Fastjson2ImageDefault(self.pr, self._config)
+        return Fastjson2ImageDefault(self.pr, self._config, self._use_apptainer)
 
     def run(self, run_cmd: str = "") -> str:
         if run_cmd:

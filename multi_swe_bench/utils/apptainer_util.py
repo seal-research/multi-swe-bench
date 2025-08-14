@@ -14,7 +14,7 @@ def check_files_exist(sandbox_path: Path, apptainer_base_file: Path, logger: log
         logger.info(f"Removed existing Apptainer base image file: {apptainer_base_file}")
 
 def pull_build(
-    image_dir: Path, sif_name: str, image_full_name: str, files: list, logger: logging.Logger
+    image_dir: Path, sif_name: str, image_full_name: str, files: list, logger: logging.Logger, g2: bool = False
 ):
     try:
         # Remove existing sandbox and base image if they exist
@@ -53,6 +53,20 @@ def pull_build(
             logger.info(f"Failed to build Apptainer sandbox image:\n{result.stderr}")
             raise RuntimeError(f"Apptainer build failed: {result.stderr}")
         
+        if g2:
+            # mkdir /scratch for sandbox to bind /scratch in container
+            logger.info(f"mkdir {image_dir} in Apptainer sandbox...")
+            result = subprocess.run(
+                [APPTAINER_BASH, "exec", "--writable", "apptainer_sandbox", "bash", "-c", f"mkdir -p {image_dir}"],
+                cwd=image_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            if result.returncode != 0:
+                logger.info(f"Failed to mkdir {image_dir} in Apptainer sandbox:\n{result.stderr}")
+                raise RuntimeError(f"Apptainer mkdir failed: {result.stderr}")
+        
         # Copy files into the sandbox
         logger.info("Copying files into the sandbox...")
         for file_path in files:
@@ -64,7 +78,7 @@ def pull_build(
         logger.info("Running prepare script...")
         result = subprocess.run(
             [APPTAINER_BASH, "exec", "--writable", "apptainer_sandbox", "bash", "-c", 
-                 "cd apptainer_sandbox && bash home/prepare.sh"],
+                 f"cd apptainer_sandbox && bash home/prepare.sh"],
             cwd=image_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -82,6 +96,7 @@ def run(
     image_dir: Path,
     run_command: str,
     output_path: Optional[Path] = None,
+    logger: logging.Logger = None, 
 ) -> str:
     try:
         result = subprocess.run(
@@ -95,10 +110,16 @@ def run(
         )
     
         output = result.stdout
-        
+        warning_line = []
         if output_path:
             with open(output_path, "w") as f:
-                f.write(output)
+                for line in output.splitlines():
+                    if "WARNING: " in line:
+                        warning_line.append(line)
+                    else:
+                        f.write(line + "\n")
+                for line in warning_line:
+                    f.write(line + "\n")
                 if result.returncode != 0:
                     f.write(f"\n\nProcess returned non-zero exit code: {result.returncode}")
         
@@ -113,9 +134,13 @@ def run(
         apptainer_base_file = image_dir / "apptainer_base.sif"
         sandbox_path = image_dir / "apptainer_sandbox"
         try:
-            if sandbox_path.exists():
-                shutil.rmtree(sandbox_path, ignore_errors=True)
             if apptainer_base_file.exists():
                 os.remove(apptainer_base_file)
+                logger.info(f"Removed Apptainer base image file: {apptainer_base_file}")
+            if sandbox_path.exists():
+                shutil.rmtree(sandbox_path, ignore_errors=True)
+                logger.info(f"Removed Apptainer sandbox directory: {sandbox_path}")
         except Exception as e:
             print(f"Failed to remove Apptainer sandbox or base image file: {e}")
+            logger.error(f"Failed to remove Apptainer sandbox or base image file: {e}")
+            raise e

@@ -193,9 +193,10 @@ RUN apt-get update && apt-get install -y \
 
 
 class Catch2ImageDefault(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self.use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -206,6 +207,8 @@ class Catch2ImageDefault(Image):
         return self._config
 
     def dependency(self) -> Image | None:
+        if self.use_apptainer:
+            return "omnicodeorg/omnicode:catchorg_catch2_base"
         if 2288 <= self.pr.number and self.pr.number <= 2554:
             return Catch2ImageBaseCpp12(self.pr, self._config)
         elif self.pr.number <= 2187:
@@ -348,17 +351,18 @@ ctest
 
 @Instance.register("catchorg", "Catch2")
 class Catch2(Instance):
-    def __init__(self, pr: PullRequest, config: Config, *args, **kwargs):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer:bool, *args, **kwargs):
         super().__init__()
         self._pr = pr
         self._config = config
+        self.use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
         return self._pr
 
     def dependency(self) -> Optional[Image]:
-        return Catch2ImageDefault(self.pr, self._config)
+        return Catch2ImageDefault(self.pr, self._config, self.use_apptainer)
 
     def run(self, run_cmd: str = "") -> str:
         if run_cmd:

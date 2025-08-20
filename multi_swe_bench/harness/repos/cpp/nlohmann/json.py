@@ -176,9 +176,10 @@ RUN cd /home/ && git clone https://github.com/nlohmann/json_test_data.git
 
 
 class JsonImageDefault(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self.use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -189,11 +190,12 @@ class JsonImageDefault(Image):
         return self._config
 
     def dependency(self) -> Image | None:
+        if self.use_apptainer: 
+            return "omnicodeorg/omnicode:nlohmann_json_base"
         if 2825 <= self.pr.number and self.pr.number <= 3685:
             return JsonImageBaseCpp12(self.pr, self._config)
         elif self.pr.number <= 2576:
             return JsonImageBaseCpp7(self.pr, self._config)
-
         return JsonImageBase(self.pr, self._config)
 
     def image_tag(self) -> str:
@@ -333,17 +335,18 @@ ctest
 
 @Instance.register("nlohmann", "json")
 class Json(Instance):
-    def __init__(self, pr: PullRequest, config: Config, *args, **kwargs):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool, *args, **kwargs):
         super().__init__()
         self._pr = pr
         self._config = config
+        self.use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
         return self._pr
 
     def dependency(self) -> Optional[Image]:
-        return JsonImageDefault(self.pr, self._config)
+        return JsonImageDefault(self.pr, self._config, self.use_apptainer)
 
     def run(self, run_cmd: str = "") -> str:
         if run_cmd:

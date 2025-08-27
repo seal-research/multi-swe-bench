@@ -115,34 +115,36 @@ WORKDIR /home/
 
 {code}
 
-RUN apt-get update && \
-    apt-get install -y \
+# Fix APT sources for deprecated Debian Buster
+RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g' /etc/apt/sources.list && \
+    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
+
+# Install base packages
+RUN apt-get update && apt-get install -y \
     build-essential \
     pkg-config \
     wget \
-    tar && \
-    wget https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.tar.gz && \
-    tar -zxvf cmake-3.14.0-Linux-x86_64.tar.gz && \
-    mv cmake-3.14.0-Linux-x86_64 /opt/cmake && \
-    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && \
-    rm cmake-3.14.0-Linux-x86_64.tar.gz
-RUN apt-get install -y cmake
-RUN apt-get install -y \
+    tar \
     python3 \
     python3-pip \
     python3-venv \
     python3-setuptools \
     curl \
     git \
-    ca-certificates \
- && apt-get clean && rm -rf /var/lib/apt/lists/*
+    ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set PATH to include pipx
-ENV PATH="/root/.local/bin:$PATH"
+# Install custom CMake version
+RUN wget https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.tar.gz && \
+    tar -zxvf cmake-3.14.0-Linux-x86_64.tar.gz && \
+    mv cmake-3.14.0-Linux-x86_64 /opt/cmake && \
+    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && \
+    rm cmake-3.14.0-Linux-x86_64.tar.gz
 
-# Install pipx and swe-rex
-RUN pip3 install --break-system-packages --user pipx && \
-    /root/.local/bin/pipx install swe-rex
+# Install swe-rex
+RUN pip3 install swe-rex
+
 
 {self.clear_env}
 
@@ -165,6 +167,8 @@ class SimdjsonImageDefault(Image):
 
     def dependency(self) -> Image | None:
         if self.use_apptainer: 
+            if self.pr.number <= 958:
+                return "omnicodeorg/omnicode:simdjson_simdjson_base_cpp7"
             return "omnicodeorg/omnicode:simdjson_simdjson_base"
         if self.pr.number <= 958:
             return SimdjsonImageBaseCpp7(self.pr, self._config)

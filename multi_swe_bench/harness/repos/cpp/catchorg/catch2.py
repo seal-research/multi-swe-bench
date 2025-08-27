@@ -191,28 +191,30 @@ WORKDIR /home/
 
 {code}
 
-RUN apt-get update && apt-get install -y \
-    libbrotli-dev \
-    libcurl4-openssl-dev \
-    clang \
-    build-essential \
-    cmake \
-    python3 \
-    python3-dev \
-    python3-pip \
-    python3-venv \
-    python3-setuptools \
-    curl \
-    git \
-    ca-certificates \
- && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g' /etc/apt/sources.list && \
+    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until && \
+    apt-get update && \
+    apt-get install -y \
+      libbrotli-dev \
+      libcurl4-openssl-dev \
+      clang \
+      build-essential \
+      cmake \
+      python3 \
+      python3-dev \
+      python3-pip \
+      python3-venv \
+      python3-setuptools \
+      curl \
+      git \
+      ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set PATH to include pipx
 ENV PATH="/root/.local/bin:$PATH"
 
-# Install pipx and swe-rex
-RUN pip3 install --break-system-packages --user pipx && \
-    /root/.local/bin/pipx install swe-rex
+RUN pip3 install swe-rex
 
 {self.clear_env}
 
@@ -235,7 +237,12 @@ class Catch2ImageDefault(Image):
 
     def dependency(self) -> Image | None:
         if self.use_apptainer:
+            if 2288 <= self.pr.number and self.pr.number <= 2554:
+                return "omnicodeorg/omnicode:catchorg_catch2_base_cpp12"
+            elif self.pr.number <= 2187:
+                return "omnicodeorg/omnicode:catchorg_catch2_base_cpp7"
             return "omnicodeorg/omnicode:catchorg_catch2_base"
+        
         if 2288 <= self.pr.number and self.pr.number <= 2554:
             return Catch2ImageBaseCpp12(self.pr, self._config)
         elif self.pr.number <= 2187:

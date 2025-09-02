@@ -238,10 +238,10 @@ class Catch2ImageDefault(Image):
     def dependency(self) -> Image | None:
         if self.use_apptainer:
             if 2288 <= self.pr.number and self.pr.number <= 2554:
-                return "omnicodeorg/omnicode:catchorg_catch2_base_cpp12"
+                return "omnicodeorg/omnicode:catchorg_Catch2_base_cpp12"
             elif self.pr.number <= 2187:
-                return "omnicodeorg/omnicode:catchorg_catch2_base_cpp7"
-            return "omnicodeorg/omnicode:catchorg_catch2_base"
+                return "omnicodeorg/omnicode:catchorg_Catch2_base_cpp7"
+            return "omnicodeorg/omnicode:catchorg_Catch2_base"
         
         if 2288 <= self.pr.number and self.pr.number <= 2554:
             return Catch2ImageBaseCpp12(self.pr, self._config)

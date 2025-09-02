@@ -57,7 +57,20 @@ RUN apt-get update && apt-get install -y \
     cmake \
     python3 \
     python3-dev \
-    python3-pip
+    python3-pip \
+    python3-venv \
+    python3-setuptools \
+    curl \
+    git \
+    ca-certificates \
+ && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Set PATH to include pipx
+ENV PATH="/root/.local/bin:$PATH"
+
+# Install pipx and swe-rex
+RUN pip3 install --break-system-packages --user pipx && \
+    /root/.local/bin/pipx install swe-rex
 
 {self.clear_env}
 
@@ -115,7 +128,20 @@ RUN apt-get update && apt-get install -y \
     cmake \
     python3 \
     python3-dev \
-    python3-pip
+    python3-pip \
+    python3-venv \
+    python3-setuptools \
+    curl \
+    git \
+    ca-certificates \
+ && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Set PATH to include pipx
+ENV PATH="/root/.local/bin:$PATH"
+
+# Install pipx and swe-rex
+RUN pip3 install --break-system-packages --user pipx && \
+    /root/.local/bin/pipx install swe-rex
 
 {self.clear_env}
 
@@ -165,15 +191,30 @@ WORKDIR /home/
 
 {code}
 
-RUN apt-get update && apt-get install -y \
-    libbrotli-dev \
-    libcurl4-openssl-dev \
-    clang \
-    build-essential \
-    cmake \
-    python3 \
-    python3-dev \
-    python3-pip
+RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g' /etc/apt/sources.list && \
+    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until && \
+    apt-get update && \
+    apt-get install -y \
+      libbrotli-dev \
+      libcurl4-openssl-dev \
+      clang \
+      build-essential \
+      cmake \
+      python3 \
+      python3-dev \
+      python3-pip \
+      python3-venv \
+      python3-setuptools \
+      curl \
+      git \
+      ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Set PATH to include pipx
+ENV PATH="/root/.local/bin:$PATH"
+
+RUN pip3 install swe-rex
 
 {self.clear_env}
 
@@ -181,9 +222,10 @@ RUN apt-get update && apt-get install -y \
 
 
 class Catch2ImageDefault(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self.use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -194,6 +236,13 @@ class Catch2ImageDefault(Image):
         return self._config
 
     def dependency(self) -> Image | None:
+        if self.use_apptainer:
+            if 2288 <= self.pr.number and self.pr.number <= 2554:
+                return "omnicodeorg/omnicode:catchorg_Catch2_base_cpp12"
+            elif self.pr.number <= 2187:
+                return "omnicodeorg/omnicode:catchorg_Catch2_base_cpp7"
+            return "omnicodeorg/omnicode:catchorg_Catch2_base"
+        
         if 2288 <= self.pr.number and self.pr.number <= 2554:
             return Catch2ImageBaseCpp12(self.pr, self._config)
         elif self.pr.number <= 2187:
@@ -336,17 +385,18 @@ ctest
 
 @Instance.register("catchorg", "Catch2")
 class Catch2(Instance):
-    def __init__(self, pr: PullRequest, config: Config, *args, **kwargs):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer:bool, *args, **kwargs):
         super().__init__()
         self._pr = pr
         self._config = config
+        self.use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
         return self._pr
 
     def dependency(self) -> Optional[Image]:
-        return Catch2ImageDefault(self.pr, self._config)
+        return Catch2ImageDefault(self.pr, self._config, self.use_apptainer)
 
     def run(self, run_cmd: str = "") -> str:
         if run_cmd:

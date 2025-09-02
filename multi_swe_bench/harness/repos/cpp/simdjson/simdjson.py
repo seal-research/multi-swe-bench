@@ -51,6 +51,22 @@ WORKDIR /home/
 
 RUN apt-get update && apt-get install -y libbrotli-dev libcurl4-openssl-dev
 RUN apt-get install -y clang build-essential cmake pkg-config
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    python3-setuptools \
+    curl \
+    git \
+    ca-certificates \
+ && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Set PATH to include pipx
+ENV PATH="/root/.local/bin:$PATH"
+
+# Install pipx and swe-rex
+RUN pip3 install --break-system-packages --user pipx && \
+    /root/.local/bin/pipx install swe-rex
 
 {self.clear_env}
 
@@ -99,18 +115,36 @@ WORKDIR /home/
 
 {code}
 
-RUN apt-get update && \
-    apt-get install -y \
+# Fix APT sources for deprecated Debian Buster
+RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g' /etc/apt/sources.list && \
+    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
+
+# Install base packages
+RUN apt-get update && apt-get install -y \
     build-essential \
     pkg-config \
     wget \
-    tar && \
-    wget https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.tar.gz && \
+    tar \
+    python3 \
+    python3-pip \
+    python3-venv \
+    python3-setuptools \
+    curl \
+    git \
+    ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install custom CMake version
+RUN wget https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.tar.gz && \
     tar -zxvf cmake-3.14.0-Linux-x86_64.tar.gz && \
     mv cmake-3.14.0-Linux-x86_64 /opt/cmake && \
     ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && \
     rm cmake-3.14.0-Linux-x86_64.tar.gz
-RUN apt-get install -y cmake
+
+# Install swe-rex
+RUN pip3 install swe-rex
+
 
 {self.clear_env}
 
@@ -118,9 +152,10 @@ RUN apt-get install -y cmake
 
 
 class SimdjsonImageDefault(Image):
-    def __init__(self, pr: PullRequest, config: Config):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool):
         self._pr = pr
         self._config = config
+        self.use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
@@ -131,9 +166,12 @@ class SimdjsonImageDefault(Image):
         return self._config
 
     def dependency(self) -> Image | None:
+        if self.use_apptainer: 
+            if self.pr.number <= 958:
+                return "omnicodeorg/omnicode:simdjson_simdjson_base_cpp7"
+            return "omnicodeorg/omnicode:simdjson_simdjson_base"
         if self.pr.number <= 958:
             return SimdjsonImageBaseCpp7(self.pr, self._config)
-
         return SimdjsonImageBase(self.pr, self._config)
 
     def image_tag(self) -> str:
@@ -272,17 +310,18 @@ ctest
 
 @Instance.register("simdjson", "simdjson")
 class Simdjson(Instance):
-    def __init__(self, pr: PullRequest, config: Config, *args, **kwargs):
+    def __init__(self, pr: PullRequest, config: Config, use_apptainer: bool, *args, **kwargs):
         super().__init__()
         self._pr = pr
         self._config = config
+        self.use_apptainer = use_apptainer
 
     @property
     def pr(self) -> PullRequest:
         return self._pr
 
     def dependency(self) -> Optional[Image]:
-        return SimdjsonImageDefault(self.pr, self._config)
+        return SimdjsonImageDefault(self.pr, self._config, self.use_apptainer)
 
     def run(self, run_cmd: str = "") -> str:
         if run_cmd:

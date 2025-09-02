@@ -113,13 +113,7 @@ def run(
         warning_line = []
         if output_path:
             with open(output_path, "w") as f:
-                for line in output.splitlines():
-                    if "WARNING: " in line:
-                        warning_line.append(line)
-                    else:
-                        f.write(line + "\n")
-                for line in warning_line:
-                    f.write(line + "\n")
+                f.write(output)
                 if result.returncode != 0:
                     f.write(f"\n\nProcess returned non-zero exit code: {result.returncode}")
         
@@ -144,3 +138,4 @@ def run(
             print(f"Failed to remove Apptainer sandbox or base image file: {e}")
             logger.error(f"Failed to remove Apptainer sandbox or base image file: {e}")
             raise e
+        

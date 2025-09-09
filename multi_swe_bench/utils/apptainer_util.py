@@ -30,7 +30,7 @@ def pull_build(
         # Pull the Apptainer base image
         logger.info("Pulling Apptainer image...")
         result = subprocess.run(
-            [APPTAINER_BASH, "pull", sif_name, f"docker://{image_full_name}"],
+            [APPTAINER_BASH, "pull", "--disable-cache", sif_name, f"docker://{image_full_name}"],
             cwd=image_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -43,7 +43,7 @@ def pull_build(
         # Build the Apptainer base sandbox
         logger.info("Building Apptainer sandbox...")
         result = subprocess.run(
-            [APPTAINER_BASH, "build", "--sandbox", "apptainer_sandbox", sif_name],
+            [APPTAINER_BASH, "build", "--disable-cache", "--sandbox", "apptainer_sandbox", sif_name],
             cwd=image_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -113,13 +113,7 @@ def run(
         warning_line = []
         if output_path:
             with open(output_path, "w") as f:
-                for line in output.splitlines():
-                    if "WARNING: " in line:
-                        warning_line.append(line)
-                    else:
-                        f.write(line + "\n")
-                for line in warning_line:
-                    f.write(line + "\n")
+                f.write(output)
                 if result.returncode != 0:
                     f.write(f"\n\nProcess returned non-zero exit code: {result.returncode}")
         
@@ -144,3 +138,4 @@ def run(
             print(f"Failed to remove Apptainer sandbox or base image file: {e}")
             logger.error(f"Failed to remove Apptainer sandbox or base image file: {e}")
             raise e
+        

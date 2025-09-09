@@ -30,7 +30,7 @@ def pull_build(
         # Pull the Apptainer base image
         logger.info("Pulling Apptainer image...")
         result = subprocess.run(
-            [APPTAINER_BASH, "pull", sif_name, f"docker://{image_full_name}"],
+            [APPTAINER_BASH, "pull", "--disable-cache", sif_name, f"docker://{image_full_name}"],
             cwd=image_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -43,7 +43,7 @@ def pull_build(
         # Build the Apptainer base sandbox
         logger.info("Building Apptainer sandbox...")
         result = subprocess.run(
-            [APPTAINER_BASH, "build", "--sandbox", "apptainer_sandbox", sif_name],
+            [APPTAINER_BASH, "build", "--disable-cache", "--sandbox", "apptainer_sandbox", sif_name],
             cwd=image_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
